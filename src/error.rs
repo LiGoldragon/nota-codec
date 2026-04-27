@@ -71,6 +71,13 @@ pub enum Error {
         type_name: &'static str,
         message: String,
     },
+
+    /// An integer literal didn't fit in the target type.
+    #[error("integer {value} out of range for {target}")]
+    IntegerOutOfRange {
+        target: &'static str,
+        value: i128,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

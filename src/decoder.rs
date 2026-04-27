@@ -55,6 +55,98 @@ impl<'input> Decoder<'input> {
         }
     }
 
+    /// Read an unsigned integer that fits in `u32`.
+    pub fn read_u32(&mut self) -> Result<u32> {
+        let value = self.read_u64()?;
+        u32::try_from(value).map_err(|_| Error::IntegerOutOfRange {
+            target: "u32",
+            value: value as i128,
+        })
+    }
+
+    /// Read an unsigned integer that fits in `u16`.
+    pub fn read_u16(&mut self) -> Result<u16> {
+        let value = self.read_u64()?;
+        u16::try_from(value).map_err(|_| Error::IntegerOutOfRange {
+            target: "u16",
+            value: value as i128,
+        })
+    }
+
+    /// Read an unsigned integer that fits in `u8`.
+    pub fn read_u8(&mut self) -> Result<u8> {
+        let value = self.read_u64()?;
+        u8::try_from(value).map_err(|_| Error::IntegerOutOfRange {
+            target: "u8",
+            value: value as i128,
+        })
+    }
+
+    /// Read a signed integer that fits in `i64`. Accepts
+    /// `Int` in range; `UInt` only if it fits as a positive
+    /// `i64`.
+    pub fn read_i64(&mut self) -> Result<i64> {
+        match self.next_token()? {
+            Token::Int(value) if value >= i64::MIN as i128 && value <= i64::MAX as i128 => {
+                Ok(value as i64)
+            }
+            Token::UInt(value) if value <= i64::MAX as u128 => Ok(value as i64),
+            other => Err(Error::UnexpectedToken { expected: "i64 integer literal", got: other }),
+        }
+    }
+
+    /// Read a signed integer that fits in `i32`.
+    pub fn read_i32(&mut self) -> Result<i32> {
+        let value = self.read_i64()?;
+        i32::try_from(value).map_err(|_| Error::IntegerOutOfRange {
+            target: "i32",
+            value: value as i128,
+        })
+    }
+
+    /// Read a signed integer that fits in `i16`.
+    pub fn read_i16(&mut self) -> Result<i16> {
+        let value = self.read_i64()?;
+        i16::try_from(value).map_err(|_| Error::IntegerOutOfRange {
+            target: "i16",
+            value: value as i128,
+        })
+    }
+
+    /// Read a signed integer that fits in `i8`.
+    pub fn read_i8(&mut self) -> Result<i8> {
+        let value = self.read_i64()?;
+        i8::try_from(value).map_err(|_| Error::IntegerOutOfRange {
+            target: "i8",
+            value: value as i128,
+        })
+    }
+
+    /// Read a 64-bit float. Accepts `Float` directly; an
+    /// integer literal also decodes (cast to `f64`).
+    pub fn read_f64(&mut self) -> Result<f64> {
+        match self.next_token()? {
+            Token::Float(value) => Ok(value),
+            Token::Int(value) => Ok(value as f64),
+            Token::UInt(value) => Ok(value as f64),
+            other => Err(Error::UnexpectedToken { expected: "float or integer literal", got: other }),
+        }
+    }
+
+    /// Read a 32-bit float. Same shape as `read_f64`; cast to
+    /// `f32` after reading.
+    pub fn read_f32(&mut self) -> Result<f32> {
+        Ok(self.read_f64()? as f32)
+    }
+
+    /// Read a byte vector (`#hex…` literal).
+    pub fn read_bytes(&mut self) -> Result<Vec<u8>> {
+        match self.next_token()? {
+            Token::Bytes(bytes) => Ok(bytes),
+            other => Err(Error::UnexpectedToken { expected: "byte literal `#…`", got: other }),
+        }
+    }
+
     /// Read a PascalCase identifier (the wire form of a unit-
     /// variant enum value or a record-head name). Returns the
     /// identifier text; the caller matches it against its

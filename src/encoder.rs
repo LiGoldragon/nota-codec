@@ -59,6 +59,51 @@ impl Encoder {
         Ok(())
     }
 
+    /// Write an `i64` literal.
+    pub fn write_i64(&mut self, value: i64) -> Result<()> {
+        self.write_separator_if_needed();
+        write!(self.output, "{value}").expect("write to String cannot fail");
+        self.needs_space = true;
+        Ok(())
+    }
+
+    /// Write an `f64` literal. Non-finite values (NaN, ±inf)
+    /// have no nota representation; this method writes them as
+    /// the strings `NaN` / `inf` / `-inf` for now — callers
+    /// that need deterministic round-trip should reject
+    /// non-finite floats at the type level.
+    pub fn write_f64(&mut self, value: f64) -> Result<()> {
+        self.write_separator_if_needed();
+        if value.is_nan() {
+            self.output.push_str("NaN");
+        } else if value.is_infinite() {
+            if value.is_sign_negative() {
+                self.output.push_str("-inf");
+            } else {
+                self.output.push_str("inf");
+            }
+        } else if value.fract() == 0.0 && value.is_finite() {
+            // Integers-as-floats need the trailing `.0` to
+            // round-trip as Float not Int.
+            write!(self.output, "{value:.1}").expect("write to String cannot fail");
+        } else {
+            write!(self.output, "{value}").expect("write to String cannot fail");
+        }
+        self.needs_space = true;
+        Ok(())
+    }
+
+    /// Write a byte vector as the `#hex…` literal form.
+    pub fn write_bytes(&mut self, bytes: &[u8]) -> Result<()> {
+        self.write_separator_if_needed();
+        self.output.push('#');
+        for byte in bytes {
+            write!(self.output, "{byte:02x}").expect("write to String cannot fail");
+        }
+        self.needs_space = true;
+        Ok(())
+    }
+
     /// Write a PascalCase identifier verbatim. Used for unit-
     /// variant enum values and record-head names. The caller is
     /// responsible for the identifier already being PascalCase
