@@ -257,23 +257,29 @@ impl<'input> Decoder<'input> {
         Ok(is_end)
     }
 
-    /// Look at the head identifier of the next record without
-    /// consuming any tokens. Used by closed-enum dispatchers
-    /// (`NexusVerb`) that need to know which variant to delegate
-    /// to before its `decode` method runs `expect_record_head`.
+    /// Look at the head identifier of the next record (or
+    /// pattern record) without consuming any tokens. Used by
+    /// closed-enum dispatchers (`NexusVerb`) that need to know
+    /// which variant to delegate to before the variant's full
+    /// `decode` runs `expect_record_head` (or `expect_pattern_record_head`).
     ///
-    /// On success, the `(` and the identifier remain queued as
-    /// the next two tokens so the variant's full decode reads
+    /// Accepts both `(Name …)` and `(| Name … |)` openers — a
+    /// single `NexusVerb` enum may dispatch over kinds whose
+    /// payloads use either form (e.g. `QueryOperation` whose
+    /// variants are `NexusPattern` types).
+    ///
+    /// On success, the opener and the identifier remain queued
+    /// as the next two tokens so the variant's full decode reads
     /// them normally.
     pub fn peek_record_head(&mut self) -> Result<String> {
-        let lparen = self.next_token()?;
-        if !matches!(lparen, Token::LParen) {
+        let opener = self.next_token()?;
+        if !matches!(opener, Token::LParen | Token::LParenPipe) {
             // Push back what we read so the caller's error
             // message can come from its own dispatch site.
-            self.pushback.push_front(lparen.clone());
+            self.pushback.push_front(opener.clone());
             return Err(Error::UnexpectedToken {
-                expected: "`(` opening a record",
-                got: lparen,
+                expected: "`(` or `(|` opening a record",
+                got: opener,
             });
         }
         let head_token = self.next_token()?;
@@ -281,7 +287,7 @@ impl<'input> Decoder<'input> {
             Token::Ident(name) if crate::lexer::is_pascal_case(name) => name.clone(),
             _ => {
                 self.pushback.push_front(head_token.clone());
-                self.pushback.push_front(lparen);
+                self.pushback.push_front(opener);
                 return Err(Error::UnexpectedToken {
                     expected: "PascalCase record-head identifier",
                     got: head_token,
@@ -290,7 +296,7 @@ impl<'input> Decoder<'input> {
         };
         // Push back so the variant's full `decode` reads them.
         self.pushback.push_front(head_token);
-        self.pushback.push_front(lparen);
+        self.pushback.push_front(opener);
         Ok(head_name)
     }
 }
