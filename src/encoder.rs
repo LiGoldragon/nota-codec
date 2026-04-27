@@ -169,4 +169,23 @@ impl Encoder {
         self.needs_space = true;
         Ok(())
     }
+
+    // ─── Sequence bracketing ────────────────────────────────
+
+    /// Open a sequence: write `[`. The first subsequent
+    /// element-write inside this sequence will appear with no
+    /// leading space.
+    pub fn start_seq(&mut self) -> Result<()> {
+        self.write_separator_if_needed();
+        self.output.push('[');
+        self.needs_space = false;
+        Ok(())
+    }
+
+    /// Close the most recently opened sequence: write `]`.
+    pub fn end_seq(&mut self) -> Result<()> {
+        self.output.push(']');
+        self.needs_space = true;
+        Ok(())
+    }
 }

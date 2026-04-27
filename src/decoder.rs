@@ -212,6 +212,51 @@ impl<'input> Decoder<'input> {
         Ok(is_bind)
     }
 
+    /// Returns true if the next token is `)` or `|)` —
+    /// indicating no more fields remain in the current record.
+    /// Used by `Option<T>::decode` to implement trailing-
+    /// omission (an absent `)` boundary means the optional was
+    /// `None`).
+    pub fn peek_is_record_end(&mut self) -> Result<bool> {
+        let token = self.next_token()?;
+        let is_end = matches!(&token, Token::RParen | Token::RParenPipe);
+        self.pushback.push_front(token);
+        Ok(is_end)
+    }
+
+    // ─── Sequence bracketing ────────────────────────────────
+
+    /// Expect `[` opening a sequence.
+    pub fn expect_seq_start(&mut self) -> Result<()> {
+        match self.next_token()? {
+            Token::LBracket => Ok(()),
+            other => Err(Error::UnexpectedToken {
+                expected: "`[` opening a sequence",
+                got: other,
+            }),
+        }
+    }
+
+    /// Expect `]` closing a sequence.
+    pub fn expect_seq_end(&mut self) -> Result<()> {
+        match self.next_token()? {
+            Token::RBracket => Ok(()),
+            other => Err(Error::UnexpectedToken {
+                expected: "`]` closing a sequence",
+                got: other,
+            }),
+        }
+    }
+
+    /// Returns true if the next token is `]` — used by
+    /// `Vec<T>::decode` to detect end-of-sequence.
+    pub fn peek_is_seq_end(&mut self) -> Result<bool> {
+        let token = self.next_token()?;
+        let is_end = matches!(&token, Token::RBracket);
+        self.pushback.push_front(token);
+        Ok(is_end)
+    }
+
     /// Look at the head identifier of the next record without
     /// consuming any tokens. Used by closed-enum dispatchers
     /// (`NexusVerb`) that need to know which variant to delegate

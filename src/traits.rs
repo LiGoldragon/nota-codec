@@ -48,5 +48,54 @@ impl NotaDecode for String {
     }
 }
 
-// TODO: i64, f64, bool, Vec<T>, Option<T> as the derives that
-// need them land.
+// ─── Option<T> — trailing-omission ──────────────────────────
+//
+// `Some(value)` encodes as the inner value. `None` writes
+// nothing. The derive enforces that `Option<T>` fields appear
+// only at the end of records — see reports/099 §6.1 for the
+// design rationale.
+
+impl<T: NotaEncode> NotaEncode for Option<T> {
+    fn encode(&self, encoder: &mut Encoder) -> Result<()> {
+        match self {
+            Some(value) => value.encode(encoder),
+            None => Ok(()),
+        }
+    }
+}
+
+impl<T: NotaDecode> NotaDecode for Option<T> {
+    fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
+        if decoder.peek_is_record_end()? {
+            Ok(None)
+        } else {
+            Ok(Some(T::decode(decoder)?))
+        }
+    }
+}
+
+// ─── Vec<T> — `[a b c]` sequence form ───────────────────────
+
+impl<T: NotaEncode> NotaEncode for Vec<T> {
+    fn encode(&self, encoder: &mut Encoder) -> Result<()> {
+        encoder.start_seq()?;
+        for element in self {
+            element.encode(encoder)?;
+        }
+        encoder.end_seq()
+    }
+}
+
+impl<T: NotaDecode> NotaDecode for Vec<T> {
+    fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
+        decoder.expect_seq_start()?;
+        let mut elements = Vec::new();
+        while !decoder.peek_is_seq_end()? {
+            elements.push(T::decode(decoder)?);
+        }
+        decoder.expect_seq_end()?;
+        Ok(elements)
+    }
+}
+
+// TODO: i64, f64, bool as the derives that need them land.
