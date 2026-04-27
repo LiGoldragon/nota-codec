@@ -38,15 +38,23 @@ fn option_present_round_trips_with_trailing_value() {
 }
 
 #[test]
-fn option_absent_round_trips_with_no_trailing_value() {
+fn option_absent_round_trips_with_explicit_none() {
     let edit = Edit { slot: Slot(100), expected_rev: None };
     let mut encoder = Encoder::nexus();
     edit.encode(&mut encoder).unwrap();
-    assert_eq!(encoder.into_string(), "(Edit 100)");
+    assert_eq!(encoder.into_string(), "(Edit 100 None)");
 
-    let mut decoder = Decoder::nexus("(Edit 100)");
+    let mut decoder = Decoder::nexus("(Edit 100 None)");
     let recovered = Edit::decode(&mut decoder).unwrap();
     assert_eq!(recovered, edit);
+}
+
+#[test]
+fn option_absent_also_decodes_from_legacy_trailing_omission() {
+    // Backward-compat: old wire form (None elided at tail) still parses.
+    let mut decoder = Decoder::nexus("(Edit 100)");
+    let recovered = Edit::decode(&mut decoder).unwrap();
+    assert_eq!(recovered, Edit { slot: Slot(100), expected_rev: None });
 }
 
 // ─── Vec<T> ─────────────────────────────────────────────────
@@ -119,9 +127,9 @@ fn struct_variant_with_absent_optional_round_trips() {
     };
     let mut encoder = Encoder::nexus();
     mutation.encode(&mut encoder).unwrap();
-    assert_eq!(encoder.into_string(), "(Node 100 (Node \"Alice\"))");
+    assert_eq!(encoder.into_string(), "(Node 100 (Node \"Alice\") None)");
 
-    let mut decoder = Decoder::nexus("(Node 100 (Node \"Alice\"))");
+    let mut decoder = Decoder::nexus("(Node 100 (Node \"Alice\") None)");
     assert_eq!(MutateOperation::decode(&mut decoder).unwrap(), mutation);
 }
 
@@ -134,8 +142,8 @@ fn struct_variant_dispatches_to_graph_variant() {
     };
     let mut encoder = Encoder::nexus();
     mutation.encode(&mut encoder).unwrap();
-    assert_eq!(encoder.into_string(), "(Graph 200 (Graph \"G\" [1]))");
+    assert_eq!(encoder.into_string(), "(Graph 200 (Graph \"G\" [1]) None)");
 
-    let mut decoder = Decoder::nexus("(Graph 200 (Graph \"G\" [1]))");
+    let mut decoder = Decoder::nexus("(Graph 200 (Graph \"G\" [1]) None)");
     assert_eq!(MutateOperation::decode(&mut decoder).unwrap(), mutation);
 }

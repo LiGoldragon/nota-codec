@@ -63,6 +63,14 @@ pub enum Error {
     UnexpectedEnd {
         while_parsing: &'static str,
     },
+
+    /// A validating newtype's `try_new` rejected the decoded
+    /// inner value. Used by the `NotaTryTransparent` derive.
+    #[error("validation rejected `{type_name}`: {message}")]
+    Validation {
+        type_name: &'static str,
+        message: String,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

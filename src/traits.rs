@@ -60,29 +60,87 @@ impl NotaDecode for bool {
     }
 }
 
-// ─── Option<T> — trailing-omission ──────────────────────────
+// ─── Option<T> — explicit `None` ident, always emitted ────
 //
-// `Some(value)` encodes as the inner value. `None` writes
-// nothing. The derive enforces that `Option<T>` fields appear
-// only at the end of records — see reports/099 §6.1 for the
-// design rationale.
+// **Encode** always emits an explicit `None` identifier for
+// `None`; the inner value for `Some`. Symmetric with decode —
+// no asymmetry between writer and reader.
+//
+// **Decode** accepts BOTH explicit `None` ident (canonical;
+// used by goldragon-style datom files) AND trailing-omission
+// (record ends `)` / `|)` before the field is reached) — the
+// latter is a backward-compat path so older data files that
+// elided trailing optionals still parse.
+//
+// **Why not trailing-omission for encode?** Because mid-record
+// `Option<T>` fields can't distinguish "absent" from "next
+// field's value" at decode time. Always-explicit `None` is
+// position-independent, so `Option<T>` may appear anywhere in
+// a record without ambiguity.
+//
+// **Ambiguity to know about:** `Option<String>` can't
+// distinguish the literal string `"None"` from the absent
+// value when the literal is bare. Quote the literal (`"None"`)
+// to disambiguate.
 
 impl<T: NotaEncode> NotaEncode for Option<T> {
     fn encode(&self, encoder: &mut Encoder) -> Result<()> {
         match self {
             Some(value) => value.encode(encoder),
-            None => Ok(()),
+            None => encoder.write_pascal_identifier("None"),
         }
     }
 }
 
 impl<T: NotaDecode> NotaDecode for Option<T> {
     fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
-        if decoder.peek_is_record_end()? {
+        if decoder.peek_is_explicit_none()? {
+            decoder.consume_explicit_none()?;
+            Ok(None)
+        } else if decoder.peek_is_record_end()? {
             Ok(None)
         } else {
             Ok(Some(T::decode(decoder)?))
         }
+    }
+}
+
+// ─── BTreeMap<K, V> — `[(Entry key value) (Entry key value)]` ─
+
+impl<K, V> NotaEncode for std::collections::BTreeMap<K, V>
+where
+    K: NotaEncode,
+    V: NotaEncode,
+{
+    fn encode(&self, encoder: &mut Encoder) -> Result<()> {
+        encoder.start_seq()?;
+        for (key, value) in self {
+            encoder.start_record("Entry")?;
+            key.encode(encoder)?;
+            value.encode(encoder)?;
+            encoder.end_record()?;
+        }
+        encoder.end_seq()
+    }
+}
+
+impl<K, V> NotaDecode for std::collections::BTreeMap<K, V>
+where
+    K: NotaDecode + Ord,
+    V: NotaDecode,
+{
+    fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
+        decoder.expect_seq_start()?;
+        let mut map = std::collections::BTreeMap::new();
+        while !decoder.peek_is_seq_end()? {
+            decoder.expect_record_head("Entry")?;
+            let key = K::decode(decoder)?;
+            let value = V::decode(decoder)?;
+            decoder.expect_record_end()?;
+            map.insert(key, value);
+        }
+        decoder.expect_seq_end()?;
+        Ok(map)
     }
 }
 

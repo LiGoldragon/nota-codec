@@ -69,12 +69,24 @@ impl<'input> Decoder<'input> {
         }
     }
 
-    /// Read a quoted string literal.
+    /// Read a string value. Accepts either a quoted string
+    /// literal (`"foo"`) or a bare identifier (`foo`,
+    /// `kebab-case`, `PascalCase`) per the nota grammar's
+    /// "bare idents where strings are expected" rule.
+    ///
+    /// Note the ambiguity around `Option<String>` and the
+    /// literal value `"None"`: with bare-ident-as-string in
+    /// effect, a wire `None` decodes as `PatternField::None`
+    /// when the surrounding type is `Option<String>` (the
+    /// outer `Option::decode` peeks for explicit `None`
+    /// first). To round-trip the literal string `"None"`,
+    /// quote it.
     pub fn read_string(&mut self) -> Result<String> {
         match self.next_token()? {
             Token::Str(value) => Ok(value),
+            Token::Ident(name) => Ok(name),
             other => Err(Error::UnexpectedToken {
-                expected: "string literal",
+                expected: "string literal or bare identifier",
                 got: other,
             }),
         }
@@ -233,6 +245,30 @@ impl<'input> Decoder<'input> {
         let is_end = matches!(&token, Token::RParen | Token::RParenPipe);
         self.pushback.push_front(token);
         Ok(is_end)
+    }
+
+    /// Returns true if the next token is the bare identifier
+    /// `None` — used by `Option<T>::decode` to detect the
+    /// explicit-`None`-ident sentinel (legacy nota dialect; see
+    /// reports/099 §6.1 + the horizon-rs migration feedback).
+    pub fn peek_is_explicit_none(&mut self) -> Result<bool> {
+        let token = self.next_token()?;
+        let is_none = matches!(&token, Token::Ident(name) if name == "None");
+        self.pushback.push_front(token);
+        Ok(is_none)
+    }
+
+    /// Consume the explicit `None` identifier. Caller is
+    /// responsible for having checked `peek_is_explicit_none`
+    /// returned true.
+    pub fn consume_explicit_none(&mut self) -> Result<()> {
+        match self.next_token()? {
+            Token::Ident(name) if name == "None" => Ok(()),
+            other => Err(Error::UnexpectedToken {
+                expected: "explicit `None` identifier",
+                got: other,
+            }),
+        }
     }
 
     // ─── Sequence bracketing ────────────────────────────────
