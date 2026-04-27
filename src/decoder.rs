@@ -38,4 +38,62 @@ impl<'input> Decoder<'input> {
             other => Err(Error::UnexpectedToken { expected: "u64 integer literal", got: other }),
         }
     }
+
+    /// Read a PascalCase identifier (the wire form of a unit-
+    /// variant enum value or a record-head name). Returns the
+    /// identifier text; the caller matches it against its
+    /// expected variant set.
+    pub fn read_pascal_identifier(&mut self) -> Result<String> {
+        match self.next_token()? {
+            Token::Ident(name) if crate::lexer::is_pascal_case(&name) => Ok(name),
+            other => Err(Error::UnexpectedToken {
+                expected: "PascalCase identifier",
+                got: other,
+            }),
+        }
+    }
+
+    /// Read a quoted string literal.
+    pub fn read_string(&mut self) -> Result<String> {
+        match self.next_token()? {
+            Token::Str(value) => Ok(value),
+            other => Err(Error::UnexpectedToken {
+                expected: "string literal",
+                got: other,
+            }),
+        }
+    }
+
+    // ─── Record bracketing ──────────────────────────────────
+
+    /// Expect `(Name`, consuming both tokens. Errors if either
+    /// the opening paren is missing or the head identifier
+    /// doesn't match `expected`.
+    pub fn expect_record_head(&mut self, expected: &'static str) -> Result<()> {
+        match self.next_token()? {
+            Token::LParen => {}
+            other => {
+                return Err(Error::UnexpectedToken {
+                    expected: "`(` opening a record",
+                    got: other,
+                });
+            }
+        }
+        let head = self.read_pascal_identifier()?;
+        if head != expected {
+            return Err(Error::ExpectedRecordHead { expected, got: head });
+        }
+        Ok(())
+    }
+
+    /// Expect `)` closing the current record.
+    pub fn expect_record_end(&mut self) -> Result<()> {
+        match self.next_token()? {
+            Token::RParen => Ok(()),
+            other => Err(Error::UnexpectedToken {
+                expected: "`)` closing a record",
+                got: other,
+            }),
+        }
+    }
 }

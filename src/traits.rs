@@ -36,5 +36,17 @@ impl NotaDecode for u64 {
     }
 }
 
-// TODO: i64, f64, bool, String, Vec<T>, Option<T> as the
-// derives that need them land.
+impl NotaEncode for String {
+    fn encode(&self, encoder: &mut Encoder) -> Result<()> {
+        encoder.write_string(self)
+    }
+}
+
+impl NotaDecode for String {
+    fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
+        decoder.read_string()
+    }
+}
+
+// TODO: i64, f64, bool, Vec<T>, Option<T> as the derives that
+// need them land.
