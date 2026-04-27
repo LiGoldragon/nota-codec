@@ -80,6 +80,17 @@ impl<'input> Decoder<'input> {
         }
     }
 
+    /// Read a `bool` literal (`true` or `false` keyword).
+    pub fn read_bool(&mut self) -> Result<bool> {
+        match self.next_token()? {
+            Token::Bool(value) => Ok(value),
+            other => Err(Error::UnexpectedToken {
+                expected: "`true` or `false`",
+                got: other,
+            }),
+        }
+    }
+
     // ─── Record bracketing ──────────────────────────────────
 
     /// Expect `(Name`, consuming both tokens. Errors if either

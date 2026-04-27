@@ -48,6 +48,18 @@ impl NotaDecode for String {
     }
 }
 
+impl NotaEncode for bool {
+    fn encode(&self, encoder: &mut Encoder) -> Result<()> {
+        encoder.write_bool(*self)
+    }
+}
+
+impl NotaDecode for bool {
+    fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
+        decoder.read_bool()
+    }
+}
+
 // ─── Option<T> — trailing-omission ──────────────────────────
 //
 // `Some(value)` encodes as the inner value. `None` writes
@@ -98,4 +110,4 @@ impl<T: NotaDecode> NotaDecode for Vec<T> {
     }
 }
 
-// TODO: i64, f64, bool as the derives that need them land.
+// TODO: i64, f64 as the derives that need them land.

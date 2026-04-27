@@ -83,6 +83,14 @@ impl Encoder {
         Ok(())
     }
 
+    /// Write a `bool` literal as the keyword `true` or `false`.
+    pub fn write_bool(&mut self, value: bool) -> Result<()> {
+        self.write_separator_if_needed();
+        self.output.push_str(if value { "true" } else { "false" });
+        self.needs_space = true;
+        Ok(())
+    }
+
     // ─── Record bracketing ──────────────────────────────────
 
     /// Open a record: write `(Name`. The first subsequent
