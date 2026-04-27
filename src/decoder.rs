@@ -396,6 +396,26 @@ impl<'input> Decoder<'input> {
         Ok(is_end)
     }
 
+    /// Peek at the next token without consuming it. Returns
+    /// `Ok(None)` at end-of-input — useful for top-level
+    /// dispatchers (the nexus daemon's sigil-and-delimiter
+    /// parser) where end-of-input is a normal termination
+    /// condition, not an error. Existing `peek_is_*` methods
+    /// error on EOF because they're called inside record bodies
+    /// where EOF *is* an error.
+    pub fn peek_token(&mut self) -> Result<Option<Token>> {
+        if let Some(token) = self.pushback.front() {
+            return Ok(Some(token.clone()));
+        }
+        match self.lexer.next_token()? {
+            Some(token) => {
+                self.pushback.push_back(token.clone());
+                Ok(Some(token))
+            }
+            None => Ok(None),
+        }
+    }
+
     /// Look at the head identifier of the next record (or
     /// pattern record) without consuming any tokens. Used by
     /// closed-enum dispatchers (`NexusVerb`) that need to know
