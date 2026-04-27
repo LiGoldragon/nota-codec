@@ -4,26 +4,42 @@
 //! [`nota-derive`](https://github.com/LiGoldragon/nota-derive).
 //! The methods here are what the derive-emitted code calls into.
 
+use std::collections::VecDeque;
+
 use crate::error::{Error, Result};
 use crate::lexer::{Dialect, Lexer, Token};
 
 pub struct Decoder<'input> {
     lexer: Lexer<'input>,
+    /// Tokens that were lexed but pushed back so a later
+    /// `next_token` will replay them. Holds at most a few
+    /// tokens at a time (currently used by `peek_record_head`
+    /// to look two tokens ahead without committing).
+    pushback: VecDeque<Token>,
 }
 
 impl<'input> Decoder<'input> {
     /// Open a decoder over nexus-dialect input.
     pub fn nexus(input: &'input str) -> Self {
-        Self { lexer: Lexer::with_dialect(input, Dialect::Nexus) }
+        Self {
+            lexer: Lexer::with_dialect(input, Dialect::Nexus),
+            pushback: VecDeque::new(),
+        }
     }
 
     /// Open a decoder over nota-dialect input.
     pub fn nota(input: &'input str) -> Self {
-        Self { lexer: Lexer::with_dialect(input, Dialect::Nota) }
+        Self {
+            lexer: Lexer::with_dialect(input, Dialect::Nota),
+            pushback: VecDeque::new(),
+        }
     }
 
     /// Read the next token, erroring on EOF.
     fn next_token(&mut self) -> Result<Token> {
+        if let Some(token) = self.pushback.pop_front() {
+            return Ok(token);
+        }
         self.lexer
             .next_token()?
             .ok_or(Error::UnexpectedEnd { while_parsing: "value" })
@@ -95,5 +111,141 @@ impl<'input> Decoder<'input> {
                 got: other,
             }),
         }
+    }
+
+    // ─── Pattern bracketing (nexus-only) ────────────────────
+
+    /// Expect `(| Name`, consuming all three tokens. Errors
+    /// if the opening pattern delimiter is missing or the head
+    /// identifier doesn't match `expected`.
+    pub fn expect_pattern_record_head(&mut self, expected: &'static str) -> Result<()> {
+        match self.next_token()? {
+            Token::LParenPipe => {}
+            other => {
+                return Err(Error::UnexpectedToken {
+                    expected: "`(|` opening a pattern record",
+                    got: other,
+                });
+            }
+        }
+        let head = self.read_pascal_identifier()?;
+        if head != expected {
+            return Err(Error::ExpectedRecordHead { expected, got: head });
+        }
+        Ok(())
+    }
+
+    /// Expect `|)` closing the current pattern record.
+    pub fn expect_pattern_record_end(&mut self) -> Result<()> {
+        match self.next_token()? {
+            Token::RParenPipe => Ok(()),
+            other => Err(Error::UnexpectedToken {
+                expected: "`|)` closing a pattern record",
+                got: other,
+            }),
+        }
+    }
+
+    /// Decode a `PatternField<T>` at a known schema field
+    /// position. `expected_bind_name` is the schema field name;
+    /// if the input is `@<name>` and `<name>` does not match,
+    /// returns `Error::WrongBindName`.
+    pub fn decode_pattern_field<T: crate::traits::NotaDecode>(
+        &mut self,
+        expected_bind_name: &'static str,
+    ) -> Result<crate::pattern_field::PatternField<T>> {
+        if self.peek_is_wildcard()? {
+            self.consume_wildcard()?;
+            Ok(crate::pattern_field::PatternField::Wildcard)
+        } else if self.peek_is_bind_marker()? {
+            self.next_token()?; // consume @
+            let bind_name = match self.next_token()? {
+                Token::Ident(name) if crate::lexer::is_lowercase_identifier(&name) => name,
+                other => {
+                    return Err(Error::UnexpectedToken {
+                        expected: "lowercase bind-name identifier",
+                        got: other,
+                    });
+                }
+            };
+            if bind_name != expected_bind_name {
+                return Err(Error::WrongBindName {
+                    expected: expected_bind_name,
+                    got: bind_name,
+                });
+            }
+            Ok(crate::pattern_field::PatternField::Bind)
+        } else {
+            Ok(crate::pattern_field::PatternField::Match(T::decode(self)?))
+        }
+    }
+
+    /// Helper for `PatternField`'s out-of-context `NotaDecode`
+    /// impl: returns true if the next token is the wildcard
+    /// `Token::Ident("_")`.
+    pub fn peek_is_wildcard(&mut self) -> Result<bool> {
+        // Peek without consuming.
+        let token = self.next_token()?;
+        let is_wildcard = matches!(&token, Token::Ident(name) if name == "_");
+        self.pushback.push_front(token);
+        Ok(is_wildcard)
+    }
+
+    /// Consume the wildcard token. Caller is responsible for
+    /// having checked `peek_is_wildcard` returned true.
+    pub fn consume_wildcard(&mut self) -> Result<()> {
+        match self.next_token()? {
+            Token::Ident(name) if name == "_" => Ok(()),
+            other => Err(Error::UnexpectedToken {
+                expected: "wildcard `_`",
+                got: other,
+            }),
+        }
+    }
+
+    /// Helper for `PatternField`'s out-of-context `NotaDecode`
+    /// impl: returns true if the next token is `@`.
+    pub fn peek_is_bind_marker(&mut self) -> Result<bool> {
+        let token = self.next_token()?;
+        let is_bind = matches!(&token, Token::At);
+        self.pushback.push_front(token);
+        Ok(is_bind)
+    }
+
+    /// Look at the head identifier of the next record without
+    /// consuming any tokens. Used by closed-enum dispatchers
+    /// (`NexusVerb`) that need to know which variant to delegate
+    /// to before its `decode` method runs `expect_record_head`.
+    ///
+    /// On success, the `(` and the identifier remain queued as
+    /// the next two tokens so the variant's full decode reads
+    /// them normally.
+    pub fn peek_record_head(&mut self) -> Result<String> {
+        let lparen = self.next_token()?;
+        if !matches!(lparen, Token::LParen) {
+            // Push back what we read so the caller's error
+            // message can come from its own dispatch site.
+            self.pushback.push_front(lparen.clone());
+            return Err(Error::UnexpectedToken {
+                expected: "`(` opening a record",
+                got: lparen,
+            });
+        }
+        let head_token = self.next_token()?;
+        let head_name = match &head_token {
+            Token::Ident(name) if crate::lexer::is_pascal_case(name) => name.clone(),
+            _ => {
+                self.pushback.push_front(head_token.clone());
+                self.pushback.push_front(lparen);
+                return Err(Error::UnexpectedToken {
+                    expected: "PascalCase record-head identifier",
+                    got: head_token,
+                });
+            }
+        };
+        // Push back so the variant's full `decode` reads them.
+        self.pushback.push_front(head_token);
+        self.pushback.push_front(lparen);
+        Ok(head_name)
     }
 }

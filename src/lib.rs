@@ -11,12 +11,14 @@ pub mod decoder;
 pub mod encoder;
 pub mod error;
 pub mod lexer;
+pub mod pattern_field;
 pub mod traits;
 
 pub use decoder::Decoder;
 pub use encoder::Encoder;
 pub use error::{Error, Result};
 pub use lexer::{Dialect, Lexer, Token};
+pub use pattern_field::PatternField;
 pub use traits::{NotaDecode, NotaEncode};
 
 // Re-export derives so users only depend on this crate.

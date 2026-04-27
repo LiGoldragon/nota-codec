@@ -8,7 +8,7 @@ repository   = "https://github.com/LiGoldragon/nota-codec"
 description  = "Typed Decoder + Encoder for nota and nexus dialects. Replaces nota-serde-core + nota-serde + nexus-serde with a serde-free codec built around Token-enum dispatch and the NotaEncode/NotaDecode traits."
 
 [dependencies]
-nota-derive = { git = "https://github.com/LiGoldragon/nota-derive.git", rev = "159c35878f539272451c1d66055ce2c8269d3f2a" }
+nota-derive = { git = "https://github.com/LiGoldragon/nota-derive.git", rev = "1fa1e65d0e50470b30ac6458414436d9418b3284" }
 thiserror   = "2"
 
 [lints.rust]

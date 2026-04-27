@@ -103,4 +103,70 @@ impl Encoder {
         self.needs_space = true;
         Ok(())
     }
+
+    // ─── Pattern bracketing (nexus-only) ────────────────────
+
+    /// Open a pattern record: write `(| Name`. The first
+    /// subsequent field-write inside this pattern record will
+    /// appear with no leading space; later writes get the
+    /// space separator.
+    pub fn start_pattern_record(&mut self, name: &str) -> Result<()> {
+        // TODO: error in nota dialect (pattern delimiters do
+        // not exist in nota). Will land alongside dialect-aware
+        // tests.
+        self.write_separator_if_needed();
+        self.output.push_str("(|");
+        self.output.push(' ');
+        self.output.push_str(name);
+        self.needs_space = true;
+        Ok(())
+    }
+
+    /// Close the most recently opened pattern record: write ` |)`.
+    /// The leading space is symmetric with `start_pattern_record`'s
+    /// `(| ` opening — keeps the wire form readable.
+    pub fn end_pattern_record(&mut self) -> Result<()> {
+        self.write_separator_if_needed();
+        self.output.push_str("|)");
+        self.needs_space = true;
+        Ok(())
+    }
+
+    /// Encode a `PatternField<T>` at a known schema field
+    /// position. `bind_name` is the schema field name; if the
+    /// pattern is `Bind`, the wire form is `@<bind_name>`.
+    pub fn encode_pattern_field<T>(
+        &mut self,
+        field: &crate::pattern_field::PatternField<T>,
+        bind_name: &'static str,
+    ) -> Result<()>
+    where
+        T: crate::traits::NotaEncode,
+    {
+        match field {
+            crate::pattern_field::PatternField::Wildcard => self.write_wildcard(),
+            crate::pattern_field::PatternField::Bind => self.write_bind(bind_name),
+            crate::pattern_field::PatternField::Match(value) => value.encode(self),
+        }
+    }
+
+    /// Write a wildcard `_`.
+    pub fn write_wildcard(&mut self) -> Result<()> {
+        self.write_separator_if_needed();
+        self.output.push('_');
+        self.needs_space = true;
+        Ok(())
+    }
+
+    /// Write a bind reference `@<name>`. The caller is
+    /// responsible for `name` being a valid camelCase or
+    /// kebab-case identifier (which it is when sourced from a
+    /// `*Query` struct field name).
+    pub fn write_bind(&mut self, name: &str) -> Result<()> {
+        self.write_separator_if_needed();
+        self.output.push('@');
+        self.output.push_str(name);
+        self.needs_space = true;
+        Ok(())
+    }
 }

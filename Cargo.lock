@@ -13,7 +13,7 @@ dependencies = [
 [[package]]
 name = "nota-derive"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/nota-derive.git?rev=159c35878f539272451c1d66055ce2c8269d3f2a#159c35878f539272451c1d66055ce2c8269d3f2a"
+source = "git+https://github.com/LiGoldragon/nota-derive.git?rev=1fa1e65d0e50470b30ac6458414436d9418b3284#1fa1e65d0e50470b30ac6458414436d9418b3284"
 dependencies = [
  "proc-macro2",
  "quote",
