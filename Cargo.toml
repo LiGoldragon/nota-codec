@@ -9,6 +9,10 @@ description  = "Typed Decoder + Encoder for nota and nexus dialects. Replaces no
 
 [dependencies]
 nota-derive = { git = "https://github.com/LiGoldragon/nota-derive.git", rev = "96633b7d7bd0fb6204d301401b4c08505277bf53" }
+# rkyv carried with the canonical pinned-feature set per
+# mentci/reports/074 — needed so `PatternField<T>` derives
+# `Archive` and signal types containing it can do the same.
+rkyv        = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror   = "2"
 
 [lints.rust]

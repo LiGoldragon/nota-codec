@@ -16,12 +16,14 @@
 //! for the auto-name-from-schema rule that requires `@name` to
 //! match the schema field name at the position it appears.
 
+use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
+
 use crate::decoder::Decoder;
 use crate::encoder::Encoder;
 use crate::error::Result;
 use crate::traits::{NotaDecode, NotaEncode};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PatternField<T> {
     Wildcard,
     Bind,
