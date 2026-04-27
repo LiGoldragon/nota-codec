@@ -57,6 +57,12 @@ pub enum Error {
         verb: &'static str,
         got: String,
     },
+
+    /// Hit end-of-input while parsing a value.
+    #[error("unexpected end of input while parsing {while_parsing}")]
+    UnexpectedEnd {
+        while_parsing: &'static str,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
