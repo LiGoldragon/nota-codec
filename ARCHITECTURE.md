@@ -73,7 +73,22 @@ tests/
 
 ## Status
 
-**v0.1** — skeleton in place: lexer copied from
-nota-serde-core; trait + decoder + encoder + error stubs.
-Codegen and protocol methods land incrementally as the
-implementation proceeds.
+**Working core.** Lexer + Decoder + Encoder + traits all
+shipped; six derives in nota-derive consume them. `Error`
+carries 21 typed variants split into decoder errors
+(`UnexpectedToken`, `ExpectedRecordHead`, `WrongBindName`,
+`UnknownVariant`, `UnknownKindForVerb`, `UnexpectedEnd`,
+`Validation`, `IntegerOutOfRange`,
+`PatternBindOutOfContext`) and lexer errors (`UnexpectedChar`,
+`ReservedComparisonToken`, `UnterminatedInlineString`,
+`UnterminatedMultilineString`, `NewlineInInlineString`,
+`UnknownEscape`, `UnterminatedEscape`,
+`UnexpectedPipeContinuation`, `UnexpectedPipeAtEnd`,
+`TruncatedUtf8InString`, `EmptyByteLiteral`,
+`OddByteLiteralLength`, `InvalidNumber`) — every failure mode
+is named so callers can pattern-match.
+
+Round-trip test count: 79 across the standard primitive +
+container blanket impls, the six derives, and the per-Token
+shapes. Exercised by signal's 42 tests and nexus's 20 parser
++ renderer tests as downstream consumers.
