@@ -8,12 +8,15 @@ repository   = "https://github.com/LiGoldragon/nota-codec"
 description  = "Typed Decoder + Encoder for nota and nexus dialects. Replaces nota-serde-core + nota-serde + nexus-serde with a serde-free codec built around Token-enum dispatch and the NotaEncode/NotaDecode traits."
 
 [dependencies]
-nota-derive = { git = "https://github.com/LiGoldragon/nota-derive.git", rev = "96633b7d7bd0fb6204d301401b4c08505277bf53" }
+nota-derive = { git = "https://github.com/LiGoldragon/nota-derive.git", rev = "7cff7aaddb8ed8d234b4c53b5b113adf525356ea" }
 # rkyv carried with the canonical pinned-feature set per
 # mentci/reports/074 — needed so `PatternField<T>` derives
 # `Archive` and signal types containing it can do the same.
 rkyv        = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror   = "2"
+
+[dev-dependencies]
+thiserror = "2"
 
 [lints.rust]
 unused = "allow"

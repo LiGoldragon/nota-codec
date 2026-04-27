@@ -22,4 +22,6 @@ pub use pattern_field::PatternField;
 pub use traits::{NotaDecode, NotaEncode};
 
 // Re-export derives so users only depend on this crate.
-pub use nota_derive::{NexusPattern, NexusVerb, NotaEnum, NotaRecord, NotaTransparent};
+pub use nota_derive::{
+    NexusPattern, NexusVerb, NotaEnum, NotaRecord, NotaTransparent, NotaTryTransparent,
+};
