@@ -1,0 +1,16 @@
+[package]
+name         = "nota-codec"
+version      = "0.1.0"
+edition      = "2024"
+rust-version = "1.85"
+license      = "MIT OR Apache-2.0"
+repository   = "https://github.com/LiGoldragon/nota-codec"
+description  = "Typed Decoder + Encoder for nota and nexus dialects. Replaces nota-serde-core + nota-serde + nexus-serde with a serde-free codec built around Token-enum dispatch and the NotaEncode/NotaDecode traits."
+
+[dependencies]
+nota-derive = { git = "https://github.com/LiGoldragon/nota-derive.git", rev = "79453483d7a1f7e5ee2fe6a8ecf677e0e60efcf6" }
+thiserror   = "2"
+
+[lints.rust]
+unused = "allow"
+dead_code = "allow"
