@@ -49,10 +49,7 @@ impl<T: NotaEncode> NotaEncode for PatternField<T> {
     fn encode(&self, encoder: &mut Encoder) -> Result<()> {
         match self {
             PatternField::Wildcard => encoder.write_wildcard(),
-            PatternField::Bind => Err(crate::Error::Lexer(
-                "PatternField::Bind cannot be encoded outside a NexusPattern field position — the bind name is contextual"
-                    .to_string(),
-            )),
+            PatternField::Bind => Err(crate::Error::PatternBindOutOfContext),
             PatternField::Match(value) => value.encode(encoder),
         }
     }
@@ -68,10 +65,7 @@ impl<T: NotaDecode> NotaDecode for PatternField<T> {
             decoder.consume_wildcard()?;
             Ok(PatternField::Wildcard)
         } else if decoder.peek_is_bind_marker()? {
-            Err(crate::Error::Lexer(
-                "PatternField::Bind cannot be decoded outside a NexusPattern field position — use decode_pattern_field instead"
-                    .to_string(),
-            ))
+            Err(crate::Error::PatternBindOutOfContext)
         } else {
             Ok(PatternField::Match(T::decode(decoder)?))
         }

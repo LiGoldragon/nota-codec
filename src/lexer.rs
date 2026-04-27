@@ -18,7 +18,7 @@
 //! `@a=@b` bind-alias position — are reserved for future comparison
 //! operator design; the lexer rejects them in both dialects.
 
-use crate::error::{Error, Result};
+use crate::error::{Error, NumberKind, Result};
 
 /// Grammar dialect — picks the token set the lexer recognises.
 ///
@@ -128,10 +128,10 @@ impl<'a> Lexer<'a> {
             b')' => { self.pos += 1; Ok(Some(Token::RParen)) }
             b'[' => Ok(Some(self.read_left_bracket())),
             b']' => { self.pos += 1; Ok(Some(Token::RBracket)) }
-            b'<' | b'>' => Err(Error::Lexer(format!(
-                "reserved token {:?} at byte offset {} — `<` `>` `<=` `>=` `!=` are reserved for comparison operators (design pending)",
-                b as char, self.pos,
-            ))),
+            b'<' | b'>' => Err(Error::ReservedComparisonToken {
+                token: b as char,
+                offset: self.pos,
+            }),
             b'=' => { self.pos += 1; Ok(Some(Token::Equals)) }
             b':' => { self.pos += 1; Ok(Some(Token::Colon)) }
             b'"' => Ok(Some(self.read_string()?)),
@@ -160,11 +160,11 @@ impl<'a> Lexer<'a> {
                     _ => Ok(Some(Token::Ident(ident))),
                 }
             }
-            _ => Err(Error::Lexer(format!(
-                "unexpected character {:?} at byte offset {} ({} dialect)",
-                b as char, self.pos,
-                match self.dialect { Dialect::Nota => "nota", Dialect::Nexus => "nexus" }
-            ))),
+            _ => Err(Error::UnexpectedChar {
+                character: b as char,
+                offset: self.pos,
+                dialect: self.dialect,
+            }),
         }
     }
 
@@ -208,11 +208,8 @@ impl<'a> Lexer<'a> {
             Some(b')') => { self.pos += 1; Ok(Token::RParenPipe) }
             Some(b'}') => { self.pos += 1; Ok(Token::RBracePipe) }
             Some(b']') => { self.pos += 1; Ok(Token::RBracketPipe) }
-            Some(other) => Err(Error::Lexer(format!(
-                "unexpected `|` followed by {:?} — expected `|)`, `|}}`, or `|]`",
-                other as char
-            ))),
-            None => Err(Error::Lexer("unexpected `|` at end of input".into())),
+            Some(other) => Err(Error::UnexpectedPipeContinuation { following: other as char }),
+            None => Err(Error::UnexpectedPipeAtEnd),
         }
     }
 
@@ -236,7 +233,7 @@ impl<'a> Lexer<'a> {
         let mut out = String::new();
         loop {
             let Some(b) = self.peek_byte() else {
-                return Err(Error::Lexer("unterminated inline string — missing `\"`".into()));
+                return Err(Error::UnterminatedInlineString);
             };
             match b {
                 b'"' => {
@@ -244,13 +241,11 @@ impl<'a> Lexer<'a> {
                     return Ok(out);
                 }
                 b'\n' => {
-                    return Err(Error::Lexer(
-                        "unexpected newline in inline `\" \"` string — use `\"\"\" \"\"\"` for multiline".into(),
-                    ));
+                    return Err(Error::NewlineInInlineString);
                 }
                 b'\\' => {
                     let Some(esc) = self.peek_byte_at(1) else {
-                        return Err(Error::Lexer("unterminated escape at end of input".into()));
+                        return Err(Error::UnterminatedEscape);
                     };
                     let translated = match esc {
                         b'\\' => '\\',
@@ -258,10 +253,7 @@ impl<'a> Lexer<'a> {
                         b'n' => '\n',
                         b't' => '\t',
                         b'r' => '\r',
-                        other => return Err(Error::Lexer(format!(
-                            "unknown escape `\\{}` in inline string — supported: `\\\\`, `\\\"`, `\\n`, `\\t`, `\\r`",
-                            other as char
-                        ))),
+                        other => return Err(Error::UnknownEscape { found: other as char }),
                     };
                     out.push(translated);
                     self.pos += 2;
@@ -274,9 +266,7 @@ impl<'a> Lexer<'a> {
                     if ch_len > 1 {
                         // Bounds-check + push the whole char.
                         if self.pos + ch_len > self.input.len() {
-                            return Err(Error::Lexer(
-                                "truncated UTF-8 sequence in inline string".into(),
-                            ));
+                            return Err(Error::TruncatedUtf8InString);
                         }
                         let s = &self.input[ch_start..ch_start + ch_len];
                         out.push_str(s);
@@ -297,9 +287,7 @@ impl<'a> Lexer<'a> {
         let start = self.pos;
         loop {
             let Some(b) = self.peek_byte() else {
-                return Err(Error::Lexer(
-                    "unterminated multiline string — missing `\"\"\"`".into(),
-                ));
+                return Err(Error::UnterminatedMultilineString);
             };
             if b == b'"'
                 && self.peek_byte_at(1) == Some(b'"')
@@ -324,13 +312,10 @@ impl<'a> Lexer<'a> {
         }
         let hex = &self.input[start..self.pos];
         if hex.is_empty() {
-            return Err(Error::Lexer("`#` must be followed by hex digits".into()));
+            return Err(Error::EmptyByteLiteral);
         }
         if hex.len() % 2 != 0 {
-            return Err(Error::Lexer(format!(
-                "byte literal must have even number of hex digits, got {}",
-                hex.len()
-            )));
+            return Err(Error::OddByteLiteralLength { length: hex.len() });
         }
         let mut out = Vec::with_capacity(hex.len() / 2);
         for chunk in hex.as_bytes().chunks(2) {
@@ -377,12 +362,19 @@ impl<'a> Lexer<'a> {
         let raw = &self.input[start..self.pos];
         let cleaned: String = raw.chars().filter(|c| *c != '_').collect();
         if saw_dot || saw_exp {
-            cleaned.parse::<f64>()
-                .map(Token::Float)
-                .map_err(|e| Error::Lexer(format!("invalid float {raw:?}: {e}")))
+            cleaned.parse::<f64>().map(Token::Float).map_err(|error| {
+                Error::InvalidNumber {
+                    kind: NumberKind::Float,
+                    raw: raw.to_string(),
+                    detail: error.to_string(),
+                }
+            })
         } else {
-            parse_int_literal(&cleaned, 10)
-                .map_err(|e| Error::Lexer(format!("invalid integer {raw:?}: {e}")))
+            parse_int_literal(&cleaned, 10).map_err(|error| Error::InvalidNumber {
+                kind: NumberKind::Integer,
+                raw: raw.to_string(),
+                detail: error.to_string(),
+            })
         }
     }
 
@@ -397,8 +389,11 @@ impl<'a> Lexer<'a> {
         }
         let raw = &self.input[digits_start..self.pos];
         let cleaned: String = raw.chars().filter(|c| *c != '_').collect();
-        parse_int_literal(&cleaned, radix)
-            .map_err(|e| Error::Lexer(format!("invalid radix-{radix} int {:?}: {e}", &self.input[start..self.pos])))
+        parse_int_literal(&cleaned, radix).map_err(|error| Error::InvalidNumber {
+            kind: NumberKind::RadixInt(radix),
+            raw: self.input[start..self.pos].to_string(),
+            detail: error.to_string(),
+        })
     }
 
     fn read_ident(&mut self) -> String {
