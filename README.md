@@ -3,8 +3,7 @@
 Typed `Decoder` + `Encoder` for the
 [nota](https://github.com/LiGoldragon/nota) and
 [nexus](https://github.com/LiGoldragon/nexus) text dialects.
-Replaces `nota-serde-core` + `nota-serde` + `nexus-serde` with
-a serde-free codec built around closed-`Token`-enum dispatch
+Serde-free codec built around closed-`Token`-enum dispatch
 and the `NotaEncode` / `NotaDecode` traits.
 
 ## What this crate exposes

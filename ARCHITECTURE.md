@@ -13,8 +13,7 @@ users depend on a single crate.
 ## Boundaries
 
 **Owns:**
-- The `Lexer` (token stream over nota/nexus source text). The
-  same lexer the previous `nota-serde-core` crate carried.
+- The `Lexer` (token stream over nota/nexus source text).
 - The `Token` and `Dialect` enums.
 - The `Decoder<'input>` type — typed reading from a token
   stream.
@@ -41,7 +40,7 @@ users depend on a single crate.
 ```
 src/
 ├── lib.rs        # re-exports + crate-level doc + Result<T> alias
-├── lexer.rs      # Lexer + Token + Dialect (copied from nota-serde-core)
+├── lexer.rs      # Lexer + Token + Dialect
 ├── decoder.rs    # Decoder<'input> + protocol methods
 ├── encoder.rs    # Encoder + protocol methods
 ├── traits.rs     # NotaEncode + NotaDecode + blanket impls
