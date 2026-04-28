@@ -3,9 +3,8 @@
 //! [nexus](https://github.com/LiGoldragon/nexus) text dialects.
 //!
 //! See [`README.md`](https://github.com/LiGoldragon/nota-codec)
-//! for the high-level shape and
-//! [mentci/reports/099](https://github.com/LiGoldragon/mentci/blob/main/reports/099-custom-derive-design-2026-04-27.md)
-//! for the design.
+//! for the high-level shape; [`ARCHITECTURE.md`](https://github.com/LiGoldragon/nota-codec/blob/main/ARCHITECTURE.md)
+//! for the per-module roles.
 
 pub mod decoder;
 pub mod encoder;

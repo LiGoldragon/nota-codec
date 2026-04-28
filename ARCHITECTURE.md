@@ -60,11 +60,9 @@ tests/
 
 - The other half of the pair lives at
   [`nota-derive`](https://github.com/LiGoldragon/nota-derive/blob/main/ARCHITECTURE.md).
-- Both crates exist as the serde replacement at the
-  nota-and-nexus text layer — see
-  [mentci reports/098](https://github.com/LiGoldragon/mentci/blob/main/reports/098-serde-replacement-decision-2026-04-27.md)
-  and
-  [mentci reports/099](https://github.com/LiGoldragon/mentci/blob/main/reports/099-custom-derive-design-2026-04-27.md).
+- Both crates exist as the typed text codec for the nota and
+  nexus dialects — replacing the previous serde-based path with
+  closed-enum dispatch.
 - The codec's design respects criome's perfect-specificity
   invariant — closed `Token` enum drives request dispatch,
   closed-variant enums drive verb dispatch — see
@@ -74,7 +72,7 @@ tests/
 
 **Working core.** Lexer + Decoder + Encoder + traits all
 shipped; six derives in nota-derive consume them. `Error`
-carries 21 typed variants split into decoder errors
+carries 22 typed variants split into decoder errors
 (`UnexpectedToken`, `ExpectedRecordHead`, `WrongBindName`,
 `UnknownVariant`, `UnknownKindForVerb`, `UnexpectedEnd`,
 `Validation`, `IntegerOutOfRange`,

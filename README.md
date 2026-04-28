@@ -26,10 +26,10 @@ and the `NotaEncode` / `NotaDecode` traits.
 
 ## Why this exists
 
-See [mentci/reports/098](https://github.com/LiGoldragon/mentci/blob/main/reports/098-serde-replacement-decision-2026-04-27.md)
-for the decision and
-[mentci/reports/099](https://github.com/LiGoldragon/mentci/blob/main/reports/099-custom-derive-design-2026-04-27.md)
-for the full design.
+The typed text codec for the nota and nexus dialects. Closed-enum
+dispatch (one variant per verb / record kind) at the boundary;
+the type system carries the meaning, not stringly-typed metadata.
+Replaces the previous serde-based path.
 
 ## Dialect knob
 
