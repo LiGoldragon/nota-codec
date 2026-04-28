@@ -30,7 +30,7 @@ users depend on a single crate.
   [`nota-derive`](https://github.com/LiGoldragon/nota-derive).
 - Any record kinds or wire-IR types — those live in
   [`signal`](https://github.com/LiGoldragon/signal) (Node /
-  Edge / Graph / KindDecl / AssertOperation / …).
+  Edge / Graph / AssertOperation / …).
 - `PatternField<T>` itself — defined in `signal`; this crate
   exposes the protocol method `decode_pattern_field` that
   the type's hand-impl of `NotaDecode` calls into.
