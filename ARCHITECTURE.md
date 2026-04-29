@@ -63,6 +63,11 @@ tests/
 - Both crates exist as the typed text codec for the nota and
   nexus dialects — replacing the previous serde-based path with
   closed-enum dispatch.
+- Consumed by the nexus daemon as the runtime for both halves of
+  its text↔signal gateway: the parser (`Decoder::next_request`
+  reading user nexus text into typed signal envelopes) and the
+  renderer (`Encoder` writing signal replies back out as nexus
+  text).
 - The codec's design respects criome's perfect-specificity
   invariant — closed `Token` enum drives request dispatch,
   closed-variant enums drive verb dispatch — see
