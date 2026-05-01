@@ -1,9 +1,9 @@
 //! nota-codec — typed `Decoder` + `Encoder` for the
-//! [nota](https://github.com/LiGoldragon/nota) and
-//! [nexus](https://github.com/LiGoldragon/nexus) text dialects.
+//! nota and
+//! nexus text dialects.
 //!
-//! See [`README.md`](https://github.com/LiGoldragon/nota-codec)
-//! for the high-level shape; [`ARCHITECTURE.md`](https://github.com/LiGoldragon/nota-codec/blob/main/ARCHITECTURE.md)
+//! See `README.md`
+//! for the high-level shape; `ARCHITECTURE.md`
 //! for the per-module roles.
 
 pub mod decoder;

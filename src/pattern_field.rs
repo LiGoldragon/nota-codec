@@ -12,7 +12,7 @@
 //! - `Match(value)` — match the literal value of type `T`
 //!
 //! See
-//! [nexus/spec/grammar.md](https://github.com/LiGoldragon/nexus/blob/main/spec/grammar.md)
+//! nexus/spec/grammar.md
 //! for the auto-name-from-schema rule that requires `@name` to
 //! match the schema field name at the position it appears.
 

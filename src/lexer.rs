@@ -11,7 +11,7 @@
 //! four extra delimiter pairs (`(| |)` patterns, `[| |]` atomic
 //! batches, `{ }` shapes, `{| |}` constraints) plus the five sigils
 //! `~`, `!`, `?`, `*`, `@` and the `=` bind-alias token. See
-//! [nexus/spec/grammar.md](https://github.com/LiGoldragon/nexus/blob/main/spec/grammar.md)
+//! nexus/spec/grammar.md
 //! for the locked token table.
 //!
 //! Reserved tokens — `<`, `>`, `<=`, `>=`, `!=`, and `=` outside the
