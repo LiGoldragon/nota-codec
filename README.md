@@ -1,8 +1,8 @@
 # nota-codec
 
 Typed `Decoder` + `Encoder` for the
-[nota](https://github.com/LiGoldragon/nota) and
-[nexus](https://github.com/LiGoldragon/nexus) text dialects.
+nota and
+nexus text dialects.
 Serde-free codec built around closed-`Token`-enum dispatch
 and the `NotaEncode` / `NotaDecode` traits.
 
@@ -19,7 +19,7 @@ and the `NotaEncode` / `NotaDecode` traits.
 - **Traits `NotaEncode` + `NotaDecode`** — what every typed
   value implements (usually via the derives below).
 - **Re-exports from
-  [`nota-derive`](https://github.com/LiGoldragon/nota-derive)**
+  `nota-derive`**
   — `NotaRecord`, `NotaEnum`, `NotaTransparent`,
   `NexusPattern`, `NexusVerb`. Users only depend on this crate.
 - **`Error`** — typed enum; no `Custom(String)` arm.

@@ -7,7 +7,7 @@ crate hosts the `Lexer`, the `Decoder` and `Encoder` types,
 the `NotaEncode` + `NotaDecode` traits, the `Error` type, and
 blanket impls for primitives + standard containers. It re-
 exports the derives from
-[`nota-derive`](https://github.com/LiGoldragon/nota-derive) so
+`nota-derive` so
 users depend on a single crate.
 
 ## Boundaries
@@ -27,9 +27,9 @@ users depend on a single crate.
 
 **Does not own:**
 - The proc-macro logic — that's
-  [`nota-derive`](https://github.com/LiGoldragon/nota-derive).
+  `nota-derive`.
 - Any record kinds or wire-IR types — those live in
-  [`signal`](https://github.com/LiGoldragon/signal) (Node /
+  `signal` (Node /
   Edge / Graph / AssertOperation / …).
 - `PatternField<T>` itself — defined in `signal`; this crate
   exposes the protocol method `decode_pattern_field` that
@@ -59,7 +59,7 @@ tests/
 ## Cross-cutting context
 
 - The other half of the pair lives at
-  [`nota-derive`](https://github.com/LiGoldragon/nota-derive/blob/main/ARCHITECTURE.md).
+  `nota-derive`.
 - Both crates exist as the typed text codec for the nota and
   nexus dialects — replacing the previous serde-based path with
   closed-enum dispatch.
@@ -71,7 +71,7 @@ tests/
 - The codec's design respects criome's perfect-specificity
   invariant — closed `Token` enum drives request dispatch,
   closed-variant enums drive verb dispatch — see
-  [criome ARCHITECTURE.md §2 Invariant D](https://github.com/LiGoldragon/criome/blob/main/ARCHITECTURE.md#invariant-d).
+  criome ARCHITECTURE.md §2 Invariant D.
 
 ## Status
 
