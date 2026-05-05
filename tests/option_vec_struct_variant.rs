@@ -25,6 +25,13 @@ pub struct Edit {
     pub expected_rev: Option<Revision>,
 }
 
+#[derive(NotaRecord, Debug, Clone, PartialEq, Eq)]
+pub struct OptionalTail {
+    pub action: String,
+    pub builder: Option<String>,
+    pub substituters: Option<Vec<String>>,
+}
+
 #[test]
 fn option_present_round_trips_with_trailing_value() {
     let edit = Edit { slot: Slot(100), expected_rev: Some(Revision(5)) };
@@ -55,6 +62,63 @@ fn option_absent_also_decodes_from_legacy_trailing_omission() {
     let mut decoder = Decoder::nexus("(Edit 100)");
     let recovered = Edit::decode(&mut decoder).unwrap();
     assert_eq!(recovered, Edit { slot: Slot(100), expected_rev: None });
+}
+
+#[test]
+fn optional_tail_decodes_two_present_values() {
+    let mut decoder = Decoder::nexus("(OptionalTail Switch zeus [prometheus])");
+    let recovered = OptionalTail::decode(&mut decoder).unwrap();
+    assert_eq!(
+        recovered,
+        OptionalTail {
+            action: "Switch".to_string(),
+            builder: Some("zeus".to_string()),
+            substituters: Some(vec!["prometheus".to_string()]),
+        }
+    );
+}
+
+#[test]
+fn optional_tail_decodes_explicit_none_before_later_value() {
+    let mut decoder = Decoder::nexus("(OptionalTail Switch None [prometheus])");
+    let recovered = OptionalTail::decode(&mut decoder).unwrap();
+    assert_eq!(
+        recovered,
+        OptionalTail {
+            action: "Switch".to_string(),
+            builder: None,
+            substituters: Some(vec!["prometheus".to_string()]),
+        }
+    );
+}
+
+#[test]
+fn optional_tail_decodes_all_values_omitted_at_record_end() {
+    let mut decoder = Decoder::nexus("(OptionalTail Switch)");
+    let recovered = OptionalTail::decode(&mut decoder).unwrap();
+    assert_eq!(
+        recovered,
+        OptionalTail {
+            action: "Switch".to_string(),
+            builder: None,
+            substituters: None,
+        }
+    );
+}
+
+#[test]
+fn optional_tail_encodes_absent_values_as_explicit_none() {
+    let value = OptionalTail {
+        action: "Switch".to_string(),
+        builder: None,
+        substituters: Some(vec!["prometheus".to_string()]),
+    };
+    let mut encoder = Encoder::nexus();
+    value.encode(&mut encoder).unwrap();
+    assert_eq!(
+        encoder.into_string(),
+        "(OptionalTail \"Switch\" None [\"prometheus\"])"
+    );
 }
 
 // ─── Vec<T> ─────────────────────────────────────────────────

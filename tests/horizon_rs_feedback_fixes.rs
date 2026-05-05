@@ -102,24 +102,18 @@ fn option_decodes_from_present_value_mid_record() {
 
 #[test]
 fn option_decodes_from_trailing_omission_too() {
-    // The encoder emits trailing-omission, so this is the
-    // canonical wire form for trailing-only None values.
-    // Both encoded forms decode to the same value.
     let mut decoder = Decoder::nexus("(OptionalFields \"x\" \"label\" 42 true)");
     let with_value = OptionalFields::decode(&mut decoder).unwrap();
     assert!(with_value.maybe_label.is_some());
 
-    // Trailing optionals omitted entirely — only works when
-    // the optionals are at the tail. (Here `flag` is the
-    // last field and is required, so we can't easily show
-    // tail-omission for `OptionalFields` itself; the trailing-
-    // omission case is covered by signal::RetractOperation.)
+    // Trailing optionals may be omitted as a decode-only
+    // compatibility path. Here `flag` is the last field and is
+    // required, so this record cannot demonstrate tail omission;
+    // the case is covered by option_vec_struct_variant.rs.
 }
 
 #[test]
-fn option_round_trip_via_encode_uses_trailing_omission() {
-    // Encoder always trailing-omits None; decoder accepts
-    // either form. Round-trip equality holds.
+fn option_round_trip_via_encode_uses_explicit_none() {
     let value = OptionalFields {
         name: "x".into(),
         maybe_label: None,
@@ -129,6 +123,7 @@ fn option_round_trip_via_encode_uses_trailing_omission() {
     let mut encoder = Encoder::nexus();
     value.encode(&mut encoder).unwrap();
     let text = encoder.into_string();
+    assert_eq!(text, "(OptionalFields \"x\" None None true)");
     let mut decoder = Decoder::nexus(&text);
     let recovered = OptionalFields::decode(&mut decoder).unwrap();
     assert_eq!(value, recovered);

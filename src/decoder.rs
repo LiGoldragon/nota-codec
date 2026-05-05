@@ -341,7 +341,7 @@ impl<'input> Decoder<'input> {
 
     /// Returns true if the next token is the bare identifier
     /// `None` — used by `Option<T>::decode` to detect the
-    /// explicit-`None`-ident sentinel (legacy nota dialect).
+    /// explicit absent-value sentinel.
     pub fn peek_is_explicit_none(&mut self) -> Result<bool> {
         let token = self.next_token()?;
         let is_none = matches!(&token, Token::Ident(name) if name == "None");
